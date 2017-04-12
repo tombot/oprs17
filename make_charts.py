@@ -6,21 +6,24 @@ import urllib2
 import time
 import numpy as np
 
-NUM_TOP_TEAMS = 40
+NUM_TOP_TEAMS = 39
 
 def make_url_for_event_and_skip(event, skip):
   return "https://my.firstinspires.org/myarea/index.lasso?page=teamlist&event_type=FRC&sort_teams=number&year=2017&event=" + event + "&skip_teams=" + str(skip)
 
+def make_new_url_for_event_and_skip(event, skip):
+  return "https://frc-events.firstinspires.org/2017/" + event
+
+
 flatten = lambda l: [item for sublist in l for item in sublist]
 
-def get_teams_from_urls(urls):
+def get_teams_from_urls(urls, new_type = False):
   teams = []
   for url in urls:
     page = urllib2.urlopen(url).read()
     soup = BeautifulSoup(page, "lxml")
     tables = soup.findAll("table")
-    table = tables[2]
-    for row in tables[2].findAll("tr"):
+    for row in tables[1].findAll("tr"):
       if len(row.findAll("th")) < 1:
         teams.append(int(row.find("a").string))
   return teams
@@ -131,16 +134,20 @@ stl_urls = [
   make_url_for_event_and_skip("cmptx", 250)
 ]
 other_events = [
-  ["SJ", "casj"],
-  ["LV", "nvlv"],
-  ["NECMP", "necmp"]
+  # ["SJ", "casj"],
+  # ["LV", "nvlv"],
+  # ["NECMP", "necmp"]
+  ["Consumers", "micmp1"],
+  ["Dow", "micmp2"],
+  ["DTE", "micmp3"],
+  ["Ford", "micmp4"]
 ]
-
-events = [
-  ["HOU CMP", get_teams_from_urls(hou_urls)],
-  ["STL CMP", get_teams_from_urls(stl_urls)],
-]
+# events = [
+#   ["HOU CMP", get_teams_from_urls(hou_urls)],
+#   ["STL CMP", get_teams_from_urls(stl_urls)],
+# ]
+events = []
 for e in other_events:
-  events.append([e[0], get_teams_from_urls([make_url_for_event_and_skip(e[1], 0)])])
+  events.append([e[0], get_teams_from_urls([make_new_url_for_event_and_skip(e[1], 0)], True)])
 
 make_plots(events)
