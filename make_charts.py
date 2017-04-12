@@ -6,10 +6,13 @@ import urllib2
 import time
 import numpy as np
 
-NUM_TOP_TEAMS = 40
+NUM_TOP_TEAMS = 32
 
 def make_url_for_event_and_skip(event, skip):
   return "https://my.firstinspires.org/myarea/index.lasso?page=teamlist&event_type=FRC&sort_teams=number&year=2017&event=" + event + "&skip_teams=" + str(skip)
+
+def make_new_url_for_event_and_skip(event, skip):
+  return "https://frc-events.firstinspires.org/2017/" + event
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
@@ -19,7 +22,7 @@ def get_teams_from_urls(urls):
     page = urllib2.urlopen(url).read()
     soup = BeautifulSoup(page, "html.parser")
     tables = soup.findAll("table")
-    table = tables[2]
+    tables = soup.findAll("table")
     for row in tables[2].findAll("tr"):
       if len(row.findAll("th")) < 1:
         teams.append(int(row.find("a").string))
@@ -82,6 +85,8 @@ def make_plots(event_infos):
     auto_fuel = {}
     takeoff = {}
     event_name, teams = event_info
+    file =  open(event_name + ".txt", 'w')
+    file.write("team, auto_fuel_balls, tele_fuel_balls, fuel_points, gears, takeoff_points\n")
     event_names.append(event_name)
     for team in teams:
       auto_fuel[team] = getBest(team, 'auto_fuel_high_count_opr')
@@ -89,6 +94,9 @@ def make_plots(event_infos):
       gears[team] = getBest(team, 'gear_count_opr')
       takeoff[team] = getBest(team, 'teleop_takeoff_points_opr')
       fuel_points[team] = (fuel[team] / 3.0) + auto_fuel[team]
+      file.write(str(team) + ", " + str(auto_fuel[team]) + ", ")
+      file.write(str(fuel[team])+ ", " + str(fuel_points[team] )+ ", ")
+      file.write(str(gears[team]) + ", " + str(takeoff[team]) + "\n")
 
     auto_fuel_vals = sorted(auto_fuel.values(), reverse=True)
     fuel_vals = sorted(fuel.values(), reverse=True)
@@ -110,6 +118,7 @@ def make_plots(event_infos):
     top_n_axes[0, 2].plot(nums, fuel_points_val[0:NUM_TOP_TEAMS])
     top_n_axes[1, 0].plot(nums, gears_val[0:NUM_TOP_TEAMS])
     top_n_axes[1, 1].plot(nums, takeoff_val[0:NUM_TOP_TEAMS])
+    file.close()
 
   g_axes[0, 0].legend(event_names, loc='upper right')
   top_n_axes[0, 0].legend(event_names, loc='upper right')
@@ -118,6 +127,23 @@ def make_plots(event_infos):
   top_n_fig.suptitle(make_title("Top " + str(NUM_TOP_TEAMS) + " OPR Comparison", teams))
   plt.show(global_fig)
   plt.show(top_n_fig)
+
+def parse_divisions_from_urls(urls):
+  divisions = {}
+  for url in urls:
+    page = urllib2.urlopen(url).read()
+    soup = BeautifulSoup(page, "html.parser")
+    tables = soup.findAll("table")
+    table = tables[2]
+    for row in tables[2].findAll("tr"):
+      if len(row.findAll("th")) < 1:
+        team = int(row.find("a").string)
+        division = row.findAll("td")[3].string
+        if division is not None and division != "":
+          if not division in divisions:
+            divisions[division] = []
+          divisions[division].append(team)
+  return divisions
 
 
 # main start here
@@ -135,12 +161,19 @@ other_events = [
   ["LV", "nvlv"],
   ["NECMP", "necmp"]
 ]
-
-events = [
-  ["HOU CMP", get_teams_from_urls(hou_urls)],
-  ["STL CMP", get_teams_from_urls(stl_urls)],
+other_events = [
+  ["Carver", "carv"],
+  ["Galileo", "gal"],
+  ["Hopper", "hop"],
+  ["Newton", "new"],
+  ["Roebling", "roe"],
+  ["Turing", "tur"]
 ]
-for e in other_events:
-  events.append([e[0], get_teams_from_urls([make_url_for_event_and_skip(e[1], 0)])])
+
+divs =  parse_divisions_from_urls(hou_urls)
+
+events = []
+for key, value in divs.iteritems():
+  events.append([key, value])
 
 make_plots(events)
