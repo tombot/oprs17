@@ -17,7 +17,7 @@ def get_teams_from_urls(urls):
   teams = []
   for url in urls:
     page = urllib2.urlopen(url).read()
-    soup = BeautifulSoup(page, "lxml")
+    soup = BeautifulSoup(page, "html.parser")
     tables = soup.findAll("table")
     table = tables[2]
     for row in tables[2].findAll("tr"):
