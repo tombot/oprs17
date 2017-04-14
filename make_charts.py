@@ -161,18 +161,12 @@ other_events = [
   ["LV", "nvlv"],
   ["NECMP", "necmp"]
 ]
-other_events = [
-  ["Carver", "carv"],
-  ["Galileo", "gal"],
-  ["Hopper", "hop"],
-  ["Newton", "new"],
-  ["Roebling", "roe"],
-  ["Turing", "tur"]
-]
 
 divs =  parse_divisions_from_urls(hou_urls)
 
 events = []
+for e in other_events:
+  events.append([e[0], get_teams_from_urls([make_url_for_event_and_skip(e[1], 0)])])
 for key, value in divs.iteritems():
   events.append([key, value])
 
