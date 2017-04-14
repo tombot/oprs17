@@ -6,6 +6,7 @@ from collections import defaultdict
 conn = sqlite3.connect('oprs2017.db')
 
 CHANCE_2_ROTORS_FOR_3_GEAR_OPRS = .3
+NUM_SIMS = 100
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
@@ -36,6 +37,9 @@ def getContributions(team):
   return e
 
 def mutateContributions(c):
+  # TODO: Figure out how to mutate scores, probably just some random walking of values
+  # Maybe add/subtract half a gear
+  # and 20% of fuel (dont give people who don't shoot free fuel)
   # Apply monte carlo model here. For now, leave alone.
   return c
 
@@ -98,12 +102,6 @@ def runSimMatch(red1, red2, red3, blue1, blue2, blue3):
 
 def runSimMatchWrapper(m):
   return runSimMatch(m[0], m[1], m[2], m[3], m[4], m[5])
-
-matches_ = [
-  [254, 604, 8, 118, 173, 71],
-  [839, 4990, 16, 114, 1114, 2056],
-  [254, 2056, 1538, 839, 115, 694]
-]
 
 def runSimSchedule(matches):
   results = {}
@@ -199,7 +197,7 @@ class ManyAverages:
     return ret
 
 def runSimScheduleIterations(matches, num_iters):
-  avg_rp = {}
+  rankings = ManyAverages()
   red_match_wins = ManyAverages()
   blue_match_wins = ManyAverages()
   red_match_kpa = ManyAverages()
@@ -210,8 +208,6 @@ def runSimScheduleIterations(matches, num_iters):
   blue_match_score = ManyAverages()
   red_rps = ManyAverages()
   blue_rps = ManyAverages()
-
-
 
   num_matches = len(matches)
   for i in range(1, num_iters + 1):
@@ -231,12 +227,14 @@ def runSimScheduleIterations(matches, num_iters):
 
       red_match_score.add(match_num, r["info"]["red"][0])
       blue_match_score.add(match_num, r["info"]["blue"][0])
+    for team, rank_info in results["rankings"].iteritems():
+      rankings.add(team, rank_info[0])
 
   red_wins_res = red_match_wins.get()
   blue_wins_res = blue_match_wins.get()
 
   red_score_res = red_match_score.get()
-  blue_score_res = red_match_score.get()
+  blue_score_res = blue_score_res.get()
 
   red_rps_res = red_rps.get()
   blue_rps_res = blue_rps.get()
@@ -247,10 +245,33 @@ def runSimScheduleIterations(matches, num_iters):
   red_rotor_res = red_match_rotor_rp.get()
   blue_rotor_res = blue_match_rotor_rp.get()
 
-  results_csv = ""
+  results_csv = "match, r1, r2, r3, b1, b2, b3, redWin%, blueWin%, redScore, blueScore, redRps, blueRps, redKpaRp, blueKpaRp, redRotorRp, blueRotorRp\n"
   for i in range(1, num_matches + 1):
     m = matches[i-1]
     results_csv +=  ("%d, %d, %d, %d, %d, %d, %d, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f\n" % (i, m[0], m[1], m[2], m[3], m[4], m[5], red_wins_res[i], blue_wins_res[i], red_score_res[i], blue_score_res[i], red_rps_res[i], blue_rps_res[i], red_kpa_res[i], blue_kpa_res[i], red_rotor_res[i], blue_rotor_res[i]))
+  print "Match results (%d iterations):" % NUM_SIMS
+  print
   print results_csv
 
-runSimScheduleIterations(matches_, 10)
+  rankings_res = rankings.get()
+  rankings_sorted_by_value = OrderedDict(sorted(rankings_res.items(), key=lambda x: x[1], reverse=False))
+  rank = 1
+  print
+  print
+  print "Rankings:"
+  print
+  for k, v in rankings_sorted_by_value.items():
+    print "%d, %d, %.2f" % (rank, k, v)
+    rank += 1
+
+# TODO: Parse matches from text file or something, copied from pdf
+# For now, here is a sample
+
+matches_ = [
+  [254, 604, 8, 118, 173, 71],
+  [839, 4990, 16, 114, 1114, 2056],
+  [254, 2056, 1538, 839, 115, 694]
+]
+
+
+runSimScheduleIterations(matches_, NUM_SIMS)
